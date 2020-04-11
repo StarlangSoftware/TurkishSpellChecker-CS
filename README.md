@@ -1,7 +1,5 @@
 # TurkishSpellChecker-CS
 
-# SpellChecker
-
 This tool is a spelling checker for Modern Turkish. It detects spelling errors and corrects them appropriately, through its list of misspellings and matching to the Turkish dictionary.
 
 Detailed Description
