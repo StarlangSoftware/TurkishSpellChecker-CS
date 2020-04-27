@@ -36,7 +36,7 @@ namespace SpellChecker
                     candidates.Add(swapped);
                 }
 
-                if (TurkishLanguage.LETTERS.Contains("" + word[i]))
+                if (TurkishLanguage.LETTERS.Contains("" + word[i]) || "qwx".Contains("" + word[i]))
                 {
                     var deleted = word.Substring(0, i) + word.Substring(i + 1);
                     candidates.Add(deleted);
