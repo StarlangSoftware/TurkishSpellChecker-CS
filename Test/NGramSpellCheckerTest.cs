@@ -48,11 +48,24 @@ namespace Test
             var fsm = new FsmMorphologicalAnalyzer();
             var nGram = new NGram<string>("../../../ngram.txt");
             nGram.CalculateNGramProbabilities(new NoSmoothing<string>());
-            var nGramSpellChecker = new NGramSpellChecker(fsm, nGram);
+            var nGramSpellChecker = new NGramSpellChecker(fsm, nGram, true);
             for (var i = 0; i < modified.Length; i++)
             {
                 Assert.AreEqual(original[i].ToString(), nGramSpellChecker.SpellCheck(modified[i]).ToString());
             }
         }
+
+        [Test]
+        public void TestSpellCheckSurfaceForm()
+        {
+            var fsm = new FsmMorphologicalAnalyzer();
+            var nGram = new NGram<string>("../../../ngram.txt");
+            nGram.CalculateNGramProbabilities(new NoSmoothing<string>());
+            var nGramSpellChecker = new NGramSpellChecker(fsm, nGram, false);
+            Assert.AreEqual("noter hakkında", nGramSpellChecker.SpellCheck(new Sentence("noter hakkınad")).ToString());
+            Assert.AreEqual("arçelik'in çamaşır", nGramSpellChecker.SpellCheck(new Sentence("arçelik'in çamşaır")).ToString());
+            Assert.AreEqual("ruhsat yanında", nGramSpellChecker.SpellCheck(new Sentence("ruhset yanında")).ToString());
+        }
+
     }
 }
