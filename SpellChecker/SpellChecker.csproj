@@ -8,8 +8,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="NlpToolkit-MorphologicalAnalysis" Version="1.0.3" />
-      <PackageReference Include="NlpToolkit-NGram" Version="1.0.2" />
+      <PackageReference Include="NlpToolkit-MorphologicalAnalysis" Version="1.0.7" />
+      <PackageReference Include="NlpToolkit-NGram" Version="1.0.4" />
     </ItemGroup>
 
 </Project>
