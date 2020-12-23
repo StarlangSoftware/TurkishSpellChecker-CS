@@ -9,6 +9,7 @@ namespace SpellChecker
     {
         private readonly NGram<string> _nGram;
         private bool _rootNgram;
+        private double _threshold = 0.0;
 
         /**
          * <summary>A constructor of {@link NGramSpellChecker} class which takes a {@link FsmMorphologicalAnalyzer} and an {@link NGram}
@@ -50,6 +51,11 @@ namespace SpellChecker
             return null;
         }
 
+        public void SetThreshold(double threshold)
+        {
+            _threshold = threshold;
+        }
+
         /**
          * <summary>The spellCheck method takes a {@link Sentence} as an input and loops i times where i ranges from 0 to size of words in given sentence.
          * Then, it calls morphologicalAnalysis method with each word and assigns it to the {@link FsmParseList}, if the size of
@@ -82,7 +88,7 @@ namespace SpellChecker
                     var candidates = CandidateList(word);
                     var bestCandidate = word.GetName();
                     var bestRoot = word;
-                    bestProbability = 0;
+                    bestProbability = _threshold;
                     foreach (var candidate in candidates)
                     {
                         fsmParses = fsm.MorphologicalAnalysis(candidate);
