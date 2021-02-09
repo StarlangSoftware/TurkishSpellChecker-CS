@@ -58,8 +58,8 @@ SpellChecker finds spelling errors and corrects them in Turkish. There are two t
     
     * To instantiate this, a `FsmMorphologicalAnalyzer` is needed. 
         
-            FsmMorphologicalAnalyzer fsm = FsmMorphologicalAnalyzer();
-            SpellChecker spellChecker = SimpleSpellChecker(fsm);   
+            FsmMorphologicalAnalyzer fsm = new FsmMorphologicalAnalyzer();
+            SpellChecker spellChecker = new SimpleSpellChecker(fsm);   
      
 * `NGramSpellChecker`,
     
@@ -67,26 +67,26 @@ SpellChecker finds spelling errors and corrects them in Turkish. There are two t
     
     * `FsmMorphologicalAnalyzer` can be instantiated as follows:
         
-            FsmMorphologicalAnalyzer fsm = FsmMorphologicalAnalyzer();
+            FsmMorphologicalAnalyzer fsm = new FsmMorphologicalAnalyzer();
     
     * `NGram` can be either trained from scratch or loaded from an existing model.
         
         * Training from scratch:
                 
-                Corpus corpus = Corpus("corpus.txt"); 
-                NGram ngram = NGram(corpus.GetAllWordsAsArrayList(), 1);
+                Corpus corpus = new Corpus("corpus.txt"); 
+                NGram ngram = new NGram(corpus.GetAllWordsAsArrayList(), 1);
                 ngram.CalculateNGramProbabilities(LaplaceSmoothing());
                 
         *There are many smoothing methods available. For other smoothing methods, check [here](https://github.com/olcaytaner/NGram).*       
         * Loading from an existing model:
      
-                NGram ngram = NGram("ngram.txt");
+                NGram ngram = new NGram("ngram.txt");
 
 	*For further details, please check [here](https://github.com/StarlangSoftware/NGram).*        
             
     * Afterwards, `NGramSpellChecker` can be created as below:
         
-            SpellChecker spellChecker = NGramSpellChecker(fsm, ngram);
+            SpellChecker spellChecker = new NGramSpellChecker(fsm, ngram);
      
 
 ## Spell Correction
