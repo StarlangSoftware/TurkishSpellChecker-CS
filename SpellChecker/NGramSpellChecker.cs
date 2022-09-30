@@ -9,7 +9,7 @@ namespace SpellChecker
     {
         private readonly NGram<string> _nGram;
         private bool _rootNgram;
-        private double _threshold = 0.0;
+        private double _threshold;
 
         /**
          * <summary>A constructor of {@link NGramSpellChecker} class which takes a {@link FsmMorphologicalAnalyzer} and an {@link NGram}
@@ -32,7 +32,7 @@ namespace SpellChecker
         * <param name="index"> Index of the word</param>
         * <returns> If the word is misspelled, null; otherwise the longest root word of the possible analyses.</returns>
         */
-        private Word CheckAnalysisAndSetRoot(Sentence sentence, int index)
+        private Word CheckAnalysisAndSetRootForWordAtIndex(Sentence sentence, int index)
         {
             if (index < sentence.WordCount())
             {
@@ -51,9 +51,32 @@ namespace SpellChecker
             return null;
         }
 
+        private Word CheckAnalysisAndSetRoot(string word)
+        {
+            var fsmParses = fsm.MorphologicalAnalysis(word);
+            if (fsmParses.Size() != 0)
+            {
+                if (_rootNgram)
+                {
+                    return fsmParses.GetParseWithLongestRootWord().GetWord();
+                }
+                else
+                {
+                    return new Word(word);
+                }
+            }
+
+            return null;
+        }
+
         public void SetThreshold(double threshold)
         {
             _threshold = threshold;
+        }
+
+        private double GetProbability(string word1, string word2)
+        {
+            return _nGram.GetProbability(word1, word2);
         }
 
         /**
@@ -75,35 +98,101 @@ namespace SpellChecker
         public new Sentence SpellCheck(Sentence sentence)
         {
             Word previousRoot = null, root, nextRoot;
-            FsmParseList fsmParses;
             double previousProbability, nextProbability, bestProbability;
             var result = new Sentence();
-            root = CheckAnalysisAndSetRoot(sentence, 0);
-            nextRoot = CheckAnalysisAndSetRoot(sentence, 1);
+            root = CheckAnalysisAndSetRootForWordAtIndex(sentence, 0);
+            nextRoot = CheckAnalysisAndSetRootForWordAtIndex(sentence, 1);
             for (var i = 0; i < sentence.WordCount(); i++)
             {
+                Word nextWord = null;
+                Word previousWord = null;
+                Word nextNextWord = null;
+                Word previousPreviousWord = null;
                 var word = sentence.GetWord(i);
+                if (i > 0)
+                {
+                    previousWord = sentence.GetWord(i - 1);
+                }
+
+                if (i > 1)
+                {
+                    previousPreviousWord = sentence.GetWord(i - 2);
+                }
+
+                if (i < sentence.WordCount() - 1)
+                {
+                    nextWord = sentence.GetWord(i + 1);
+                }
+
+                if (i < sentence.WordCount() - 2)
+                {
+                    nextNextWord = sentence.GetWord(i + 2);
+                }
+
+                if (ForcedMisspellCheck(word, result)){
+                    previousRoot = CheckAnalysisAndSetRootForWordAtIndex(result, result.WordCount() - 1);
+                    root = nextRoot;
+                    nextRoot = CheckAnalysisAndSetRootForWordAtIndex(sentence, i + 2);
+                    continue;
+                }
+                if (ForcedBackwardMergeCheck(word, result, previousWord)){
+                    previousRoot = CheckAnalysisAndSetRootForWordAtIndex(result, result.WordCount() - 1);
+                    root = CheckAnalysisAndSetRootForWordAtIndex(sentence, i + 1);
+                    nextRoot = CheckAnalysisAndSetRootForWordAtIndex(sentence, i + 2);
+                    continue;
+                }
+                if (ForcedForwardMergeCheck(word, result, nextWord)){
+                    i++;
+                    previousRoot = CheckAnalysisAndSetRootForWordAtIndex(result, result.WordCount() - 1);
+                    root = CheckAnalysisAndSetRootForWordAtIndex(sentence, i + 1);
+                    nextRoot = CheckAnalysisAndSetRootForWordAtIndex(sentence, i + 2);
+                    continue;
+                }
+                if (ForcedSplitCheck(word, result) || ForcedShortcutCheck(word, result)){
+                    previousRoot = CheckAnalysisAndSetRootForWordAtIndex(result, result.WordCount() - 1);
+                    root = nextRoot;
+                    nextRoot = CheckAnalysisAndSetRootForWordAtIndex(sentence, i + 2);
+                    continue;
+                }
+
                 if (root == null)
                 {
                     var candidates = CandidateList(word);
-                    var bestCandidate = word.GetName();
+                    candidates.AddRange(MergedCandidatesList(previousWord, word, nextWord));
+                    candidates.AddRange(SplitCandidatesList(word));
+                    var bestCandidate = new Candidate(word.GetName(), Operator.NO_CHANGE);
                     var bestRoot = word;
                     bestProbability = _threshold;
                     foreach (var candidate in candidates)
                     {
-                        fsmParses = fsm.MorphologicalAnalysis(candidate);
-                        if (_rootNgram)
+                        if (candidate.GetOperator() == Operator.SPELL_CHECK ||
+                            candidate.GetOperator() == Operator.MISSPELLED_REPLACE)
                         {
-                            root = fsmParses.GetParseWithLongestRootWord().GetWord();
+                            root = CheckAnalysisAndSetRoot(candidate.GetName());
                         }
-                        else
+
+                        if (candidate.GetOperator() == Operator.BACKWARD_MERGE && previousWord != null &&
+                            previousPreviousWord != null)
                         {
-                            root = new Word(candidate);
+                            root = CheckAnalysisAndSetRoot(previousWord.GetName() + word.GetName());
+                            previousRoot = CheckAnalysisAndSetRoot(previousPreviousWord.GetName());
+                        }
+
+                        if (candidate.GetOperator() == Operator.FORWARD_MERGE && nextWord != null &&
+                            nextNextWord != null)
+                        {
+                            root = CheckAnalysisAndSetRoot(word.GetName() + nextWord.GetName());
+                            nextRoot = CheckAnalysisAndSetRoot(nextNextWord.GetName());
                         }
 
                         if (previousRoot != null)
                         {
-                            previousProbability = _nGram.GetProbability(previousRoot.GetName(), root.GetName());
+                            if (candidate.GetOperator() == Operator.SPLIT)
+                            {
+                                root = CheckAnalysisAndSetRoot(candidate.GetName().Split(" ")[0]);
+                            }
+
+                            previousProbability = GetProbability(previousRoot.GetName(), root.GetName());
                         }
                         else
                         {
@@ -112,7 +201,12 @@ namespace SpellChecker
 
                         if (nextRoot != null)
                         {
-                            nextProbability = _nGram.GetProbability(root.GetName(), nextRoot.GetName());
+                            if (candidate.GetOperator() == Operator.SPLIT)
+                            {
+                                root = CheckAnalysisAndSetRoot(candidate.GetName().Split(" ")[1]);
+                            }
+
+                            nextProbability = GetProbability(root.GetName(), nextRoot.GetName());
                         }
                         else
                         {
@@ -127,8 +221,25 @@ namespace SpellChecker
                         }
                     }
 
+                    if (bestCandidate.GetOperator() == Operator.FORWARD_MERGE)
+                    {
+                        i++;
+                    }
+
+                    if (bestCandidate.GetOperator() == Operator.BACKWARD_MERGE)
+                    {
+                        result.ReplaceWord(i - 1, new Word(bestCandidate.GetName()));
+                    }
+                    else
+                    {
+                        if (bestCandidate.GetOperator() == Operator.SPLIT){
+                            AddSplitWords(bestCandidate.GetName(), result);
+                        } else {
+                            result.AddWord(new Word(bestCandidate.GetName()));
+                        }
+                    }
+
                     root = bestRoot;
-                    result.AddWord(new Word(bestCandidate));
                 }
                 else
                 {
@@ -137,7 +248,7 @@ namespace SpellChecker
 
                 previousRoot = root;
                 root = nextRoot;
-                nextRoot = CheckAnalysisAndSetRoot(sentence, i + 2);
+                nextRoot = CheckAnalysisAndSetRootForWordAtIndex(sentence, i + 2);
             }
 
             return result;

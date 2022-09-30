@@ -1,0 +1,7 @@
+namespace SpellChecker
+{
+    public enum Operator
+    {
+        NO_CHANGE, MISSPELLED_REPLACE, FORCED_MERGE, FORCED_SPLIT, SPLIT_WITH_SHORTCUT, SPELL_CHECK, SPLIT, FORWARD_MERGE, BACKWARD_MERGE
+    }
+}
