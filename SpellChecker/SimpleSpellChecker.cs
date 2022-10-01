@@ -164,10 +164,10 @@ namespace SpellChecker
                 Word newWord;
                 if (fsmParseList.Size() == 0)
                 {
-                    var candidates = CandidateList(word);
+                    var candidates = MergedCandidatesList(previousWord, word, nextWord);
                     if (candidates.Count < 1)
                     {
-                        candidates.AddRange(MergedCandidatesList(previousWord, word, nextWord));
+                        candidates = CandidateList(word);
                     }
 
                     if (candidates.Count < 1)
