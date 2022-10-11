@@ -171,18 +171,22 @@ namespace SpellChecker
                             root = CheckAnalysisAndSetRoot(candidate.GetName());
                         }
 
-                        if (candidate.GetOperator() == Operator.BACKWARD_MERGE && previousWord != null &&
-                            previousPreviousWord != null)
+                        if (candidate.GetOperator() == Operator.BACKWARD_MERGE && previousWord != null)
                         {
                             root = CheckAnalysisAndSetRoot(previousWord.GetName() + word.GetName());
-                            previousRoot = CheckAnalysisAndSetRoot(previousPreviousWord.GetName());
+                            if (previousPreviousWord != null)
+                            {
+                                previousRoot = CheckAnalysisAndSetRoot(previousPreviousWord.GetName());
+                            }
                         }
 
-                        if (candidate.GetOperator() == Operator.FORWARD_MERGE && nextWord != null &&
-                            nextNextWord != null)
+                        if (candidate.GetOperator() == Operator.FORWARD_MERGE && nextWord != null)
                         {
                             root = CheckAnalysisAndSetRoot(word.GetName() + nextWord.GetName());
-                            nextRoot = CheckAnalysisAndSetRoot(nextNextWord.GetName());
+                            if (nextNextWord != null)
+                            {
+                                nextRoot = CheckAnalysisAndSetRoot(nextNextWord.GetName());
+                            }
                         }
 
                         if (previousRoot != null)
