@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Text.RegularExpressions;
 using Corpus;
@@ -11,15 +12,23 @@ namespace SpellChecker
 {
     public class SimpleSpellChecker : SpellChecker
     {
-        protected FsmMorphologicalAnalyzer fsm;
-        private Dictionary<string, string> mergedWords = new Dictionary<string, string>();
-        private Dictionary<string, string> splitWords = new Dictionary<string, string>();
-
-        private static List<string> shortcuts = new List<string>()
+        protected FsmMorphologicalAnalyzer Fsm;
+        private Dictionary<string, string> _mergedWords = new Dictionary<string, string>();
+        private Dictionary<string, string> _splitWords = new Dictionary<string, string>();
+        private static readonly List<string> Shortcuts = new List<string>()
         {
             "cc", "cm2", "cm", "gb", "ghz", "gr", "gram", "hz", "inc", "inch", "inç",
-            "kg", "kw", "kva", "litre", "lt", "m2", "m3", "mah", "mb", "metre", "mg", "mhz", "ml", "mm", "mp", "ms",
-            "mt", "mv", "tb", "tl", "va", "volt", "watt", "ah", "hp"
+            "kg", "kw", "kva", "litre", "lt", "m2", "m3", "mah", "mb", "metre", "mg", "mhz", "ml", "mm", "mp", "ms", "kb", "mb", "gb", "tb", "pb", "kbps",
+            "mt", "mv", "tb", "tl", "va", "volt", "watt", "ah", "hp", "oz", "rpm", "dpi", "ppm", "ohm", "kwh", "kcal", "kbit", "mbit", "gbit", "bit", "byte",
+            "mbps", "gbps", "cm3", "mm2", "mm3", "khz", "ft", "db", "sn"
+        };
+        private static readonly List<string> ConditionalShortcuts = new List<string>()
+        {
+            "g", "v", "m", "l", "w", "s"
+        };
+        private static readonly List<string> QuestionSuffixList = new List<string>()
+        {
+            "mi", "mı", "mu", "mü", "miyim", "misin", "miyiz", "midir", "miydi", "mıyım", "mısın", "mıyız", "mıdır", "mıydı", "muyum", "musun", "muyuz", "mudur", "muydu", "müyüm", "müsün", "müyüz", "müdür", "müydü", "miydim", "miydin", "miydik", "miymiş", "mıydım", "mıydın", "mıydık", "mıymış", "muydum", "muydun", "muyduk", "muymuş", "müydüm", "müydün", "müydük", "müymüş", "misiniz", "mısınız", "musunuz", "müsünüz", "miyimdir", "misindir", "miyizdir", "miydiniz", "miydiler", "miymişim", "miymişiz", "mıyımdır", "mısındır", "mıyızdır", "mıydınız", "mıydılar", "mıymışım", "mıymışız", "muyumdur", "musundur", "muyuzdur", "muydunuz", "muydular", "muymuşum", "muymuşuz", "müyümdür", "müsündür", "müyüzdür", "müydünüz", "müydüler", "müymüşüm", "müymüşüz", "miymişsin", "miymişler", "mıymışsın", "mıymışlar", "muymuşsun", "muymuşlar", "müymüşsün", "müymüşler", "misinizdir", "mısınızdır", "musunuzdur", "müsünüzdür"
         };
 
         /**
@@ -82,11 +91,11 @@ namespace SpellChecker
             var candidates = GenerateCandidateList(word.GetName());
             for (var i = 0; i < candidates.Count; i++)
             {
-                var fsmParseList = fsm.MorphologicalAnalysis(candidates[i].GetName());
+                var fsmParseList = Fsm.MorphologicalAnalysis(candidates[i].GetName());
                 if (fsmParseList.Size() == 0)
                 {
-                    var newCandidate = fsm.GetDictionary().GetCorrectForm(candidates[i].GetName());
-                    if (newCandidate != null && fsm.MorphologicalAnalysis(newCandidate).Size() > 0)
+                    var newCandidate = Fsm.GetDictionary().GetCorrectForm(candidates[i].GetName());
+                    if (newCandidate != null && Fsm.MorphologicalAnalysis(newCandidate).Size() > 0)
                     {
                         candidates[i] = new Candidate(newCandidate, Operator.MISSPELLED_REPLACE);
                     }
@@ -103,13 +112,13 @@ namespace SpellChecker
 
         /**
          * <summary>A constructor of {@link SimpleSpellChecker} class which takes a {@link FsmMorphologicalAnalyzer} as an input and
-         * assigns it to the fsm variable.</summary>
+         * assigns it to the Fsm variable.</summary>
          *
          * <param name="fsm">{@link FsmMorphologicalAnalyzer} type input.</param>
          */
         public SimpleSpellChecker(FsmMorphologicalAnalyzer fsm)
         {
-            this.fsm = fsm;
+            this.Fsm = fsm;
             LoadDictionaries();
         }
 
@@ -144,25 +153,26 @@ namespace SpellChecker
                     nextWord = sentence.GetWord(i + 1);
                 }
 
-                if (ForcedMisspellCheck(word, result) || ForcedBackwardMergeCheck(word, result, previousWord))
+                if (ForcedMisspellCheck(word, result) || ForcedBackwardMergeCheck(word, result, previousWord) || ForcedSuffixMergeCheck(word, result, previousWord))
                 {
                     continue;
                 }
 
-                if (ForcedForwardMergeCheck(word, result, nextWord))
+                if (ForcedForwardMergeCheck(word, result, nextWord) || ForcedHyphenMergeCheck(word, result, previousWord, nextWord))
                 {
                     i++;
                     continue;
                 }
 
-                if (ForcedSplitCheck(word, result) || ForcedShortcutCheck(word, result))
+                if (ForcedSplitCheck(word, result) || ForcedShortcutSplitCheck(word, result) || ForcedDeDaSplitCheck(word, result) || ForcedQuestionSuffixSplitCheck(word, result))
                 {
                     continue;
                 }
 
-                var fsmParseList = fsm.MorphologicalAnalysis(word.GetName());
+                var fsmParseList = Fsm.MorphologicalAnalysis(word.GetName());
+                var upperCaseFsmParseList = Fsm.MorphologicalAnalysis(word.GetName().Substring(0,1).ToUpper(new CultureInfo("tr-TR")) + word.GetName().Substring(1));
                 Word newWord;
-                if (fsmParseList.Size() == 0)
+                if (fsmParseList.Size() == 0 && upperCaseFsmParseList.Size() == 0)
                 {
                     var candidates = MergedCandidatesList(previousWord, word, nextWord);
                     if (candidates.Count < 1)
@@ -181,7 +191,7 @@ namespace SpellChecker
                         newWord = new Word(candidates[randomCandidate].GetName());
                         if (candidates[randomCandidate].GetOperator() == Operator.BACKWARD_MERGE)
                         {
-                            result.ReplaceWord(i - 1, newWord);
+                            result.ReplaceWord(result.WordCount() - 1, newWord);
                             continue;
                         }
 
@@ -214,7 +224,7 @@ namespace SpellChecker
 
         protected bool ForcedMisspellCheck(Word word, Sentence result)
         {
-            var forcedReplacement = fsm.GetDictionary().GetCorrectForm(word.GetName());
+            var forcedReplacement = Fsm.GetDictionary().GetCorrectForm(word.GetName());
             if (forcedReplacement != null)
             {
                 result.AddWord(new Word(forcedReplacement));
@@ -230,7 +240,7 @@ namespace SpellChecker
             {
                 var forcedReplacement =
                     GetCorrectForm(result.GetWord(result.WordCount() - 1).GetName() + " " + word.GetName(),
-                        mergedWords);
+                        _mergedWords);
                 if (forcedReplacement != null)
                 {
                     result.ReplaceWord(result.WordCount() - 1, new Word(forcedReplacement));
@@ -245,7 +255,7 @@ namespace SpellChecker
         {
             if (nextWord != null)
             {
-                var forcedReplacement = GetCorrectForm(word.GetName() + " " + nextWord.GetName(), mergedWords);
+                var forcedReplacement = GetCorrectForm(word.GetName() + " " + nextWord.GetName(), _mergedWords);
                 if (forcedReplacement != null)
                 {
                     result.AddWord(new Word(forcedReplacement));
@@ -265,7 +275,7 @@ namespace SpellChecker
 
         protected bool ForcedSplitCheck(Word word, Sentence result)
         {
-            string forcedReplacement = GetCorrectForm(word.GetName(), splitWords);
+            var forcedReplacement = GetCorrectForm(word.GetName(), _splitWords);
             if (forcedReplacement != null)
             {
                 AddSplitWords(forcedReplacement, result);
@@ -275,17 +285,23 @@ namespace SpellChecker
             return false;
         }
 
-        protected bool ForcedShortcutCheck(Word word, Sentence result)
+        protected bool ForcedShortcutSplitCheck(Word word, Sentence result)
         {
-            var shortcutRegex = "[0-9]+(" + shortcuts[0];
-            for (var i = 1; i < shortcuts.Count; i++)
+            var shortcutRegex = "^(([1-9][0-9]*)|[0])(([.]|[,])[0-9]*)?(" + Shortcuts[0];
+            for (var i = 1; i < Shortcuts.Count; i++)
             {
-                shortcutRegex += "|" + shortcuts[i];
+                shortcutRegex += "|" + Shortcuts[i];
             }
+            shortcutRegex += ")$";
+            
+            var conditionalShortcutRegex = "^(([1-9][0-9]{0,2})|[0])(([.]|[,])[0-9]*)?(" + ConditionalShortcuts[0];
+            for (var i = 1; i < ConditionalShortcuts.Count; i++)
+            {
+                conditionalShortcutRegex += "|" + ConditionalShortcuts[i];
+            }
+            conditionalShortcutRegex += ")$";
 
-            shortcutRegex += ")";
-
-            if (new Regex(shortcutRegex).IsMatch(word.GetName()))
+            if (new Regex(shortcutRegex).IsMatch(word.GetName()) || new Regex(conditionalShortcutRegex).IsMatch(word.GetName()))
             {
                 var pair = GetSplitPair(word);
                 result.AddWord(new Word(pair.Item1));
@@ -296,6 +312,141 @@ namespace SpellChecker
             return false;
         }
 
+        protected bool ForcedDeDaSplitCheck(Word word, Sentence result)
+        {
+            var wordName = word.GetName();
+            var capitalizedWordName = wordName.Substring(0, 1).ToUpper(new CultureInfo("tr-TR")) + wordName.Substring(1);
+            TxtWord txtWord = null;
+            if (wordName.EndsWith("da") || wordName.EndsWith("de"))
+            {
+                if (Fsm.MorphologicalAnalysis(wordName).Size() == 0 && Fsm.MorphologicalAnalysis(capitalizedWordName).Size() == 0)
+                {
+                    var newWordName = wordName.Substring(0, wordName.Length - 2);
+                    var fsmParseList = Fsm.MorphologicalAnalysis(newWordName);
+                    var txtNewWord = (TxtWord)Fsm.GetDictionary().GetWord(newWordName.ToLower(new CultureInfo("tr-TR")));
+                    if (txtNewWord != null && txtNewWord.IsProperNoun())
+                    {
+                        if (Fsm.MorphologicalAnalysis(newWordName + "'" + "da").Size() > 0)
+                        {
+                            result.AddWord(new Word(newWordName + "'" + "da"));
+                        }
+                        else
+                        {
+                            result.AddWord(new Word(newWordName + " " + "de"));
+                        }
+                        return true;
+                    }
+
+                    if (fsmParseList.Size() > 0)
+                    {
+                        txtWord = (TxtWord)Fsm.GetDictionary().GetWord(fsmParseList.GetParseWithLongestRootWord().GetWord().GetName());
+                    }
+                    if(txtWord != null && !txtWord.IsCode())
+                    {
+                        result.AddWord(new Word(newWordName));
+                        if (TurkishLanguage.IsBackVowel(Word.LastVowel(newWordName)))
+                        {
+                            if (txtWord.NotObeysVowelHarmonyDuringAgglutination())
+                            {
+                                result.AddWord(new Word("de"));
+                            }
+                            else
+                            {
+                                result.AddWord(new Word("da"));
+                            }
+                        }
+                        else if (txtWord.NotObeysVowelHarmonyDuringAgglutination())
+                        {
+                            result.AddWord(new Word("da"));
+                        }
+                        else
+                        {
+                            result.AddWord(new Word("de"));
+                        }
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        protected bool ForcedSuffixMergeCheck(Word word, Sentence result, Word previousWord)
+        {
+            var liList = new List<string>()
+            {
+                "li", "lı", "lu", "lü"
+            };
+            var likList = new List<string>()
+            {
+                "lik", "lık", "luk", "lük"
+            };
+            if (liList.Contains(word.GetName()) || likList.Contains(word.GetName()))
+            {
+                if(previousWord != null && new Regex("\\d+").IsMatch(previousWord.GetName()))
+                {
+                    foreach (var suffix in liList)
+                    {
+                        if (word.GetName().Length == 2 && Fsm.MorphologicalAnalysis(previousWord.GetName() + "'" + suffix).Size() > 0)
+                        {
+                            result.ReplaceWord(result.WordCount() - 1, new Word(previousWord.GetName() + "'" + suffix));
+                            return true;
+                        }
+                    }
+                    foreach (var suffix in likList)
+                    {
+                        if (word.GetName().Length == 3 && Fsm.MorphologicalAnalysis(previousWord.GetName() + "'" + suffix).Size() > 0)
+                        {
+                            result.ReplaceWord(result.WordCount() - 1, new Word(previousWord.GetName() + "'" + suffix));
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        
+        protected bool ForcedHyphenMergeCheck(Word word, Sentence result, Word previousWord, Word nextWord)
+        {
+            if (word.GetName().Equals("-") || word.GetName().Equals("–") || word.GetName().Equals("—"))
+            {
+                if (previousWord != null && nextWord != null && new Regex("^[a-zA-ZçöğüşıÇÖĞÜŞİ]+$").IsMatch(previousWord.GetName()) 
+                    && new Regex("^[a-zA-ZçöğüşıÇÖĞÜŞİ]+$").IsMatch(nextWord.GetName()))
+                {
+                   var newWordName = previousWord.GetName() + "-" + nextWord.GetName();
+                   if (Fsm.MorphologicalAnalysis(newWordName).Size() > 0)
+                   {
+                       result.ReplaceWord(result.WordCount() - 1, new Word(newWordName));
+                       return true;
+                   }
+                }
+            }   
+            return false;
+        }
+        
+        protected bool ForcedQuestionSuffixSplitCheck(Word word, Sentence result)
+        {
+            var wordName = word.GetName();
+            if (Fsm.MorphologicalAnalysis(wordName).Size() > 0)
+            {
+                return false;
+            }
+            foreach (var questionSuffix in QuestionSuffixList)
+            {
+                if (wordName.EndsWith(questionSuffix))
+                {
+                    var newWordName = wordName.Substring(0, wordName.LastIndexOf(questionSuffix));
+                    var txtWord = (TxtWord)Fsm.GetDictionary().GetWord(newWordName);
+                    if (Fsm.MorphologicalAnalysis(newWordName).Size() > 0 && txtWord != null && !txtWord.IsCode())
+                    {
+                        result.AddWord(new Word(newWordName));
+                        result.AddWord(new Word(questionSuffix));
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+        
         protected List<Candidate> MergedCandidatesList(Word previousWord, Word word, Word nextWord)
         {
             var mergedCandidates = new List<Candidate>();
@@ -305,7 +456,7 @@ namespace SpellChecker
             {
                 backwardMergeCandidate =
                     new Candidate(previousWord.GetName() + word.GetName(), Operator.BACKWARD_MERGE);
-                var fsmParseList = fsm.MorphologicalAnalysis(backwardMergeCandidate.GetName());
+                var fsmParseList = Fsm.MorphologicalAnalysis(backwardMergeCandidate.GetName());
                 if (fsmParseList.Size() != 0)
                 {
                     mergedCandidates.Add(backwardMergeCandidate);
@@ -318,7 +469,7 @@ namespace SpellChecker
                 if (backwardMergeCandidate == null ||
                     backwardMergeCandidate.GetName() != forwardMergeCandidate.GetName())
                 {
-                    FsmParseList fsmParseList = fsm.MorphologicalAnalysis(forwardMergeCandidate.GetName());
+                    FsmParseList fsmParseList = Fsm.MorphologicalAnalysis(forwardMergeCandidate.GetName());
                     if (fsmParseList.Size() != 0)
                     {
                         mergedCandidates.Add(forwardMergeCandidate);
@@ -336,8 +487,8 @@ namespace SpellChecker
             {
                 var firstPart = word.GetName().Substring(0, i);
                 var secondPart = word.GetName().Substring(i);
-                var fsmParseListFirst = fsm.MorphologicalAnalysis(firstPart);
-                var fsmParseListSecond = fsm.MorphologicalAnalysis(secondPart);
+                var fsmParseListFirst = Fsm.MorphologicalAnalysis(firstPart);
+                var fsmParseListSecond = Fsm.MorphologicalAnalysis(secondPart);
                 if (fsmParseListFirst.Size() > 0 && fsmParseListSecond.Size() > 0)
                 {
                     splitCandidates.Add(new Candidate(firstPart + " " + secondPart, Operator.SPLIT));
@@ -349,16 +500,16 @@ namespace SpellChecker
 
         private void LoadDictionaries()
         {
-            string line;
             string[] list;
+            string result;
             var assembly = typeof(SpellChecker).Assembly;
             var stream = assembly.GetManifestResourceStream("SpellChecker.merged.txt");
             var streamReader = new StreamReader(stream);
-            line = streamReader.ReadLine();
+            var line = streamReader.ReadLine();
             while (line != null)
             {
                 list = line.Split(" ");
-                mergedWords[list[0] + " " + list[1]] = list[2];
+                _mergedWords[list[0] + " " + list[1]] = list[2];
                 line = streamReader.ReadLine();
             }
 
@@ -367,8 +518,13 @@ namespace SpellChecker
             line = streamReader.ReadLine();
             while (line != null)
             {
+                result = "";
                 list = line.Split(" ");
-                splitWords[list[0]] = list[1] + " " + list[2];
+                for (int i = 1; i < list.Length; i++)
+                {
+                    result += list[i] + " ";
+                }
+                _splitWords.Add(list[0], result);
                 line = streamReader.ReadLine();
             }
         }
@@ -389,7 +545,7 @@ namespace SpellChecker
             int j;
             for (j = 0; j < word.GetName().Length; j++)
             {
-                if (word.GetName()[j] >= '0' && word.GetName()[j] <= '9')
+                if (word.GetName()[j] >= '0' && word.GetName()[j] <= '9' || word.GetName()[j] == '.' || word.GetName()[j] == ',')
                 {
                     key += word.GetName()[j];
                 }
