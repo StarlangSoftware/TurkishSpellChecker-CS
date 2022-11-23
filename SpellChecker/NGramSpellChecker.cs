@@ -24,8 +24,8 @@ namespace SpellChecker
          */
         public NGramSpellChecker(FsmMorphologicalAnalyzer fsm, NGram<string> nGram, SpellCheckerParameter parameter) : base(fsm)
         {
-            this._nGram = nGram;
-            this._parameter = parameter;
+            _nGram = nGram;
+            _parameter = parameter;
         }
 
         /**
