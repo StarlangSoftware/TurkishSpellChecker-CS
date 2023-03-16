@@ -560,7 +560,7 @@ namespace SpellChecker
             {
                 list = line.Split(" ");
                 result = list[1];
-                for (int i = 2; i < list.Length; i++)
+                for (var i = 2; i < list.Length; i++)
                 {
                     result += " " + list[i];
                 }
