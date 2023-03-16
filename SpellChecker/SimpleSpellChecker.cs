@@ -285,8 +285,10 @@ namespace SpellChecker
         protected void AddSplitWords(string multiWord, Sentence result)
         {
             var words = multiWord.Split(" ");
-            result.AddWord(new Word(words[0]));
-            result.AddWord(new Word(words[1]));
+            foreach (var word in words)
+            {
+                result.AddWord(new Word(word));    
+            }
         }
 
         protected bool ForcedSplitCheck(Word word, Sentence result)
@@ -556,11 +558,11 @@ namespace SpellChecker
             line = streamReader.ReadLine();
             while (line != null)
             {
-                result = "";
                 list = line.Split(" ");
-                for (int i = 1; i < list.Length; i++)
+                result = list[1];
+                for (int i = 2; i < list.Length; i++)
                 {
-                    result += list[i] + " ";
+                    result += " " + list[i];
                 }
 
                 _splitWords.Add(list[0], result);
