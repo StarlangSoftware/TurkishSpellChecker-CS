@@ -11,29 +11,46 @@ namespace SpellChecker
     public class NGramSpellChecker : SimpleSpellChecker
     {
         private readonly NGram<string> _nGram;
-        private SpellCheckerParameter _parameter;
 
         /**
-         * <summary>A constructor of {@link NGramSpellChecker} class which takes a {@link FsmMorphologicalAnalyzer} and an {@link NGram}
-         * as inputs. Then, calls its super class {@link SimpleSpellChecker} with given {@link FsmMorphologicalAnalyzer} and
-         * assigns given {@link NGram} to the nGram variable.</summary>
+         * <summary>
+         * A constructor of <see cref="NGramSpellChecker"/> class which takes an <see cref="FsmMorphologicalAnalyzer"/>, an <see cref="NGram"/>
+         * and a <see cref="SpellCheckerParameter"/> as inputs. Then, calls its super class <see cref="SimpleSpellChecker"/> with given <see cref="FsmMorphologicalAnalyzer"/>
+         * and <see cref="SpellCheckerParameter"/>. Finally, it assigns given <see cref="NGram"/> to the nGram variable.
+         * </summary>
          *
-         * <param name="fsm">  {@link FsmMorphologicalAnalyzer} type input.</param>
-         * <param name="nGram">{@link NGram} type input.</param>
-         * * <param name="parameter">{@link SpellCheckerParameter} type input.</param>
+         * <param name="fsm"><see cref="FsmMorphologicalAnalyzer"/> type input.</param>
+         * <param name="nGram"><see cref="NGram"/> type input.</param>    
+         * <param name="parameter"><see cref="SpellCheckerParameter"/> type input.</param>
          */
-        public NGramSpellChecker(FsmMorphologicalAnalyzer fsm, NGram<string> nGram, SpellCheckerParameter parameter) : base(fsm)
+        public NGramSpellChecker(FsmMorphologicalAnalyzer fsm, NGram<string> nGram, SpellCheckerParameter parameter) : base(fsm, parameter)
         {
             _nGram = nGram;
-            _parameter = parameter;
+        }
+        
+        /**
+         * <summary>
+         * Another constructor of <see cref="NGramSpellChecker"/> class which takes an <see cref="FsmMorphologicalAnalyzer"/> and an <see cref="NGram"/>
+         * as inputs. Then, calls its super class <see cref="SimpleSpellChecker"/> with given <see cref="FsmMorphologicalAnalyzer"/> and
+         * assigns given <see cref="NGram"/> to the nGram variable.
+         * </summary>
+         *
+         * <param name="fsm"><see cref="FsmMorphologicalAnalyzer"/> type input.</param>
+         * <param name="nGram"><see cref="NGram"/> type input.</param>
+         */
+        public NGramSpellChecker(FsmMorphologicalAnalyzer fsm, NGram<string> nGram) : base(fsm)
+        {
+            _nGram = nGram;
         }
 
         /**
-        * <summary>Checks the morphological analysis of the given word in the given index. If there is no misspelling, it returns
-        * the longest root word of the possible analyses.</summary>
+        * <summary>
+        * Checks the morphological analysis of the given word in the given index. If there is no misspelling, it returns
+        * the longest root word of the possible analysis.
+        * </summary>
         * <param name="sentence"> Sentence to be analyzed.</param>
         * <param name="index"> Index of the word</param>
-        * <returns> If the word is misspelled, null; otherwise the longest root word of the possible analyses.</returns>
+        * <returns> If the word is misspelled, null; otherwise the longest root word of the possible analysis.</returns>
         */
         private Word CheckAnalysisAndSetRootForWordAtIndex(Sentence sentence, int index)
         {
@@ -41,14 +58,14 @@ namespace SpellChecker
             {
                 var wordName = sentence.GetWord(index).GetName();
                 if (new Regex(".*\\d+.*").IsMatch(wordName) && new Regex(".*[a-zA-ZçöğüşıÇÖĞÜŞİ]+.*").IsMatch(wordName)
-                    && !wordName.Contains("'") || wordName.Length <= 3)
+                    && !wordName.Contains("'") || wordName.Length < Parameter.GetMinWordLength())
                 {
                     return sentence.GetWord(index);
                 }
                 var fsmParses = Fsm.MorphologicalAnalysis(wordName);
                 if (fsmParses.Size() != 0)
                 {
-                    if (_parameter.IsRootNGram())
+                    if (Parameter.IsRootNGram())
                     {
                         return fsmParses.GetParseWithLongestRootWord().GetWord();
                     }
@@ -60,7 +77,7 @@ namespace SpellChecker
                     var upperCaseFsmParses = Fsm.MorphologicalAnalysis(upperCaseWordName);
                     if (upperCaseFsmParses.Size() != 0)
                     {
-                        if (_parameter.IsRootNGram())
+                        if (Parameter.IsRootNGram())
                         {
                             return upperCaseFsmParses.GetParseWithLongestRootWord().GetWord();
                         }
@@ -70,22 +87,35 @@ namespace SpellChecker
             }
             return null;
         }
-
+        
+        /**
+        * <summary>
+        * Checks the morphological analysis of the given word. If there is no misspelling, it returns
+        * the longest root word of the possible analysis.
+        * </summary>
+        * <param name="word"> Word to be analyzed.</param>
+        * <returns> If the word is misspelled, null; otherwise the longest root word of the possible analysis.</returns>
+        */
         private Word CheckAnalysisAndSetRoot(string word)
         {
-            var fsmParses = Fsm.MorphologicalAnalysis(word);
-            if (fsmParses.Size() != 0)
+            var fsmParsesOfWord = Fsm.MorphologicalAnalysis(word);
+            if (fsmParsesOfWord.Size() != 0)    
             {
-                if (_parameter.IsRootNGram())
+                if (Parameter.IsRootNGram())
                 {
-                    return fsmParses.GetParseWithLongestRootWord().GetWord();
+                    return fsmParsesOfWord.GetParseWithLongestRootWord().GetWord();
                 }
-                else
-                {
-                    return new Word(word);
-                }
+                return new Word(word);
             }
-
+            var fsmParsesOfCapitalizedWord = Fsm.MorphologicalAnalysis(word.Substring(0, 1).ToUpper(new CultureInfo("tr-TR")) + word.Substring(1));
+            if (fsmParsesOfCapitalizedWord.Size() != 0)  
+            {
+                if (Parameter.IsRootNGram())
+                {
+                    return fsmParsesOfCapitalizedWord.GetParseWithLongestRootWord().GetWord();
+                }
+                return new Word(word);
+            }
             return null;
         }
 
@@ -95,7 +125,8 @@ namespace SpellChecker
         }
 
         /**
-         * <summary>The spellCheck method takes a {@link Sentence} as an input and loops i times where i ranges from 0 to size of words in given sentence.
+         * <summary>
+         * The spellCheck method takes a {@link Sentence} as an input and loops i times where i ranges from 0 to size of words in given sentence.
          * Then, it calls morphologicalAnalysis method with each word and assigns it to the {@link FsmParseList}, if the size of
          * {@link FsmParseList} is equal to the 0, it adds current word to the candidateList and assigns it to the candidates {@link ArrayList}.
          * <p/>
@@ -105,18 +136,19 @@ namespace SpellChecker
          * Then, it finds out the best probability and the corresponding candidate as best candidate and adds it to the result {@link Sentence}.
          * <p/>
          * If the size of {@link FsmParseList} is not equal to 0, it directly adds the current word to the result {@link Sentence} and finds
-         * the previousRoot directly from the {@link FsmParseList}.</summary>
+         * the previousRoot directly from the {@link FsmParseList}.
+         * </summary>
          *
          * <param name="sentence">{@link Sentence} type input.</param>
          * <returns>Sentence result.</returns>
          */
         public new Sentence SpellCheck(Sentence sentence)
         {
-            Word previousRoot = null, root, nextRoot;
+            Word previousRoot = null;
             double previousProbability, nextProbability, bestProbability;
             var result = new Sentence();
-            root = CheckAnalysisAndSetRootForWordAtIndex(sentence, 0);
-            nextRoot = CheckAnalysisAndSetRootForWordAtIndex(sentence, 1);
+            var root = CheckAnalysisAndSetRootForWordAtIndex(sentence, 0);
+            var nextRoot = CheckAnalysisAndSetRootForWordAtIndex(sentence, 1);
             for (var i = 0; i < sentence.WordCount(); i++)
             {
                 Word nextWord = null;
@@ -173,7 +205,7 @@ namespace SpellChecker
                     nextRoot = CheckAnalysisAndSetRootForWordAtIndex(sentence, i + 2);
                     continue;
                 }
-                if (_parameter.DeMiCheck())
+                if (Parameter.DeMiCheck())
                 {
                     if (ForcedDeDaSplitCheck(word, result) || ForcedQuestionSuffixSplitCheck(word, result))
                     {
@@ -184,22 +216,24 @@ namespace SpellChecker
                     }
                 }
 
-                if (root == null || (word.GetName().Length <= 3 && Fsm.MorphologicalAnalysis(word.GetName()).Size() == 0))
+                if (root == null || (word.GetName().Length < Parameter.GetMinWordLength() && Fsm.MorphologicalAnalysis(word.GetName()).Size() == 0))
                 {
                     var candidates = new List<Candidate>();
                     if (root == null)
                     {
-                        candidates.AddRange(CandidateList(word));
+                        candidates.AddRange(CandidateList(word, sentence));
                         candidates.AddRange(SplitCandidatesList(word));
                     }
                     candidates.AddRange(MergedCandidatesList(previousWord, word, nextWord));
                     var bestCandidate = new Candidate(word.GetName(), Operator.NO_CHANGE);
                     var bestRoot = word;
-                    bestProbability = _parameter.GetThreshold();
+                    bestProbability = Parameter.GetThreshold();
                     foreach (var candidate in candidates)
                     {
                         if (candidate.GetOperator() == Operator.SPELL_CHECK ||
-                            candidate.GetOperator() == Operator.MISSPELLED_REPLACE)
+                            candidate.GetOperator() == Operator.MISSPELLED_REPLACE ||
+                            candidate.GetOperator() == Operator.CONTEXT_BASED||
+                            candidate.GetOperator() == Operator.TRIE_BASED)
                         {
                             root = CheckAnalysisAndSetRoot(candidate.GetName());
                         }
@@ -250,7 +284,7 @@ namespace SpellChecker
                             nextProbability = 0.0;
                         }
 
-                        if (System.Math.Max(previousProbability, nextProbability) > bestProbability)
+                        if (System.Math.Max(previousProbability, nextProbability) > bestProbability || candidates.Count == 1)
                         {
                             bestCandidate = candidate;
                             bestRoot = root;
@@ -269,9 +303,12 @@ namespace SpellChecker
                     }
                     else
                     {
-                        if (bestCandidate.GetOperator() == Operator.SPLIT){
+                        if (bestCandidate.GetOperator() == Operator.SPLIT)
+                        {
                             AddSplitWords(bestCandidate.GetName(), result);
-                        } else {
+                        } 
+                        else 
+                        {
                             result.AddWord(new Word(bestCandidate.GetName()));
                         }
                     }

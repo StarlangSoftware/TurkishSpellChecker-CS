@@ -21,6 +21,14 @@
       <EmbeddedResource Include="split.txt">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </EmbeddedResource>
+      <None Remove="context_list.txt" />
+      <EmbeddedResource Include="context_list.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </EmbeddedResource>
+      <None Remove="generated_words.txt" />
+      <EmbeddedResource Include="generated_words.txt">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </EmbeddedResource>
     </ItemGroup>
 
 </Project>
