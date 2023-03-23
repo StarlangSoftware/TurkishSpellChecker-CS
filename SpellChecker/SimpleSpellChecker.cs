@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Text;
 using System.Text.RegularExpressions;
 using Corpus;
 using Dictionary.Dictionary;
@@ -13,6 +14,7 @@ namespace SpellChecker
     public class SimpleSpellChecker : SpellChecker
     {
         protected FsmMorphologicalAnalyzer Fsm;
+        protected SpellCheckerParameter Parameter;
         private Dictionary<string, string> _mergedWords = new Dictionary<string, string>();
         private Dictionary<string, string> _splitWords = new Dictionary<string, string>();
 
@@ -42,16 +44,51 @@ namespace SpellChecker
             "miymişler", "mıymışsın", "mıymışlar", "muymuşsun", "muymuşlar", "müymüşsün", "müymüşler", "misinizdir",
             "mısınızdır", "musunuzdur", "müsünüzdür"
         };
-
+        
         /**
-         * <summary>The generateCandidateList method takes a string as an input. Firstly, it creates a string consists of lowercase Turkish letters
+         * <summary>
+         * A constructor of <see cref="SimpleSpellChecker"/> class which takes an <see cref="FsmMorphologicalAnalyzer"/> as an input and
+         * assigns it to the Fsm variable. Then it creates a new <see cref="SpellCheckerParameter"/> and assigns it to the Parameter.
+         * Finally, it calls the LoadDictionaries method.
+         * </summary>
+         *
+         * <param name="fsm"><see cref="FsmMorphologicalAnalyzer"/> type input.</param>
+         */
+        public SimpleSpellChecker(FsmMorphologicalAnalyzer fsm)
+        {
+            Fsm = fsm;
+            Parameter = new SpellCheckerParameter();
+            LoadDictionaries();
+        }
+        
+        /**
+         * <summary>
+         * Another constructor of <see cref="SimpleSpellChecker"/> class which takes a <see cref="FsmMorphologicalAnalyzer"/> and a
+         * <see cref="SpellCheckerParameter"/> as inputs, assigns given <see cref="FsmMorphologicalAnalyzer"/> to the Fsm variable and
+         * <see cref="SpellCheckerParameter"/> to the Parameter variable. Then, it calls the LoadDictionaries method.
+         * </summary>
+         *
+         * <param name="fsm"><see cref="FsmMorphologicalAnalyzer"/> type input.</param>
+         * <param name="parameter"><see cref="SpellCheckerParameter"/> type input.</param>
+         */
+        public SimpleSpellChecker(FsmMorphologicalAnalyzer fsm, SpellCheckerParameter parameter)
+        {
+            Fsm = fsm;
+            Parameter = parameter;
+            LoadDictionaries();
+        }
+        
+        /**
+         * <summary>
+         * The generateCandidateList method takes a string as an input. Firstly, it creates a string consists of lowercase Turkish letters
          * and an {@link List} candidates. Then, it loops i times where i ranges from 0 to the length of given word. It gets substring
          * from 0 to ith index and concatenates it with substring from i+1 to the last index as a new string called deleted. Then, adds
          * this string to the candidates {@link List}. Secondly, it loops j times where j ranges from 0 to length of
          * lowercase letters string and adds the jth character of this string between substring of given word from 0 to ith index
          * and the substring from i+1 to the last index, then adds it to the candidates {@link List}. Thirdly, it loops j
          * times where j ranges from 0 to length of lowercase letters string and adds the jth character of this string between
-         * substring of given word from 0 to ith index and the substring from i to the last index, then adds it to the candidates {@link List}.</summary>
+         * substring of given word from 0 to ith index and the substring from i to the last index, then adds it to the candidates {@link List}.
+         * </summary>
          *
          * <param name="word">string input.</param>
          * <returns>List candidates.</returns>
@@ -82,23 +119,29 @@ namespace SpellChecker
                     {
                         var added = word.Substring(0, i) + t + word.Substring(i);
                         candidates.Add(new Candidate(added, Operator.SPELL_CHECK));
+                        if (i == word.Length - 1) 
+                        {
+                            var addedLast = new Candidate(word.Substring(0, i + 1) + t, Operator.SPELL_CHECK);
+                            candidates.Add(addedLast);
+                        }
                     }
                 }
             }
-
             return candidates;
         }
 
         /**
-         * <summary>The candidateList method takes a {@link Word} as an input and creates a candidates {@link List} by calling generateCandidateList
+         * <summary>
+         * The candidateList method takes a {@link Word} as an input and creates a candidates {@link List} by calling generateCandidateList
          * method with given word. Then, it loop i times where i ranges from 0 to size of candidates {@link List} and creates a
          * {@link FsmParseList} by calling morphologicalAnalysis with each item of candidates {@link List}. If the size of
-         * {@link FsmParseList} is 0, it then removes the ith item.</summary>
+         * {@link FsmParseList} is 0, it then removes the ith item.
+         * </summary>
          *
          * <param name="word">Word input.</param>
          * <returns>candidates {@link List}.</returns>
          */
-        protected List<Candidate> CandidateList(Word word)
+        protected virtual List<Candidate> CandidateList(Word word, Sentence sentence)
         {
             var candidates = GenerateCandidateList(word.GetName());
             for (var i = 0; i < candidates.Count; i++)
@@ -118,30 +161,18 @@ namespace SpellChecker
                     }
                 }
             }
-
             return candidates;
         }
-
+        
         /**
-         * <summary>A constructor of {@link SimpleSpellChecker} class which takes a {@link FsmMorphologicalAnalyzer} as an input and
-         * assigns it to the Fsm variable.</summary>
-         *
-         * <param name="fsm">{@link FsmMorphologicalAnalyzer} type input.</param>
-         */
-        public SimpleSpellChecker(FsmMorphologicalAnalyzer fsm)
-        {
-            Fsm = fsm;
-            LoadDictionaries();
-        }
-
-
-        /**
-         * <summary>The spellCheck method takes a {@link Sentence} as an input and loops i times where i ranges from 0 to size of words in given sentence.
+         * <summary>
+         * The spellCheck method takes a {@link Sentence} as an input and loops i times where i ranges from 0 to size of words in given sentence.
          * Then, it calls morphologicalAnalysis method with each word and assigns it to the {@link FsmParseList}, if the size of
          * {@link FsmParseList} is equal to the 0, it adds current word to the candidateList and assigns it to the candidates {@link List}.
          * if the size of candidates greater than 0, it generates a random number and selects an item from candidates {@link List} with
          * this random number and assign it as newWord. If the size of candidates is not greater than 0, it directly assigns the
-         * current word as newWord. At the end, it adds the newWord to the result {@link Sentence}.</summary>
+         * current word as newWord. At the end, it adds the newWord to the result {@link Sentence}.
+         * </summary>
          *
          * <param name="sentence">{@link Sentence} type input.</param>
          * <returns>Sentence result.</returns>
@@ -193,7 +224,7 @@ namespace SpellChecker
                     var candidates = MergedCandidatesList(previousWord, word, nextWord);
                     if (candidates.Count < 1)
                     {
-                        candidates = CandidateList(word);
+                        candidates = CandidateList(word,sentence);
                     }
 
                     if (candidates.Count < 1)
@@ -234,10 +265,21 @@ namespace SpellChecker
 
                 result.AddWord(newWord);
             }
-
             return result;
         }
 
+        
+        /**
+        * <summary>
+        * Checks if the given word is a misspelled word according to the misspellings list,
+        * and if it is, then replaces it with its correct form in the given sentence.
+        * </summary>
+        *
+        * <param name="word">the word to check for misspelling</param> 
+        * <param name="result">the sentence that the word belongs to</param>
+        *
+        * <returns>true if the word was corrected, false otherwise</returns>
+        */
         protected bool ForcedMisspellCheck(Word word, Sentence result)
         {
             var forcedReplacement = Fsm.GetDictionary().GetCorrectForm(word.GetName());
@@ -249,7 +291,19 @@ namespace SpellChecker
 
             return false;
         }
-
+        
+        /**
+        * <summary>
+        * Checks if the given word and its preceding word need to be merged according to the merged list.
+        * If the merge is needed, the word and its preceding word are replaced with their merged form in the given sentence.
+        * </summary>
+        *
+        * <param name="word">The word to check for merge</param> 
+        * <param name="result">The sentence that the word belongs to</param>
+        * <param name="previousWord">The preceding word of the given word</param>
+        *
+        * <returns>True if the word was merged, false otherwise</returns>
+        */
         protected bool ForcedBackwardMergeCheck(Word word, Sentence result, Word previousWord)
         {
             if (previousWord != null)
@@ -266,7 +320,19 @@ namespace SpellChecker
 
             return false;
         }
-
+        
+        /**
+        * <summary>
+        * Checks if the given word and its next word need to be merged according to the merged list.
+        * If the merge is needed, the word and its next word are replaced with their merged form in the given sentence.
+        * </summary>
+        * 
+        * <param name="word">The word to check for merge.</param>
+        * <param name="result">The sentence that the word belongs to.</param>
+        * <param name="nextWord">The next word of the given word.</param>
+        *
+        * <returns>True if the word was merged, false otherwise.</returns>
+        */
         protected bool ForcedForwardMergeCheck(Word word, Sentence result, Word nextWord)
         {
             if (nextWord != null)
@@ -281,7 +347,15 @@ namespace SpellChecker
 
             return false;
         }
-
+        
+        /**
+        * <summary>
+        * Given a multiword form, splits it and adds it to the given sentence.
+        * </summary>
+        *
+        * <param name="multiWord">Multiword form to split.</param>
+        * <param name="result">The sentence to add the split words to.</param>
+        */
         protected void AddSplitWords(string multiWord, Sentence result)
         {
             var words = multiWord.Split(" ");
@@ -290,7 +364,18 @@ namespace SpellChecker
                 result.AddWord(new Word(word));    
             }
         }
-
+        
+        /**
+        * <summary>
+        * Checks if the given word needs to be split according to the split list.
+        * If the split is needed, the word is replaced with its split form in the given sentence.
+        * </summary>
+        *
+        * <param name="word">the word to check for split</param> 
+        * <param name="result">the sentence that the word belongs to</param>
+        *
+        * <returns>true if the word was split, false otherwise</returns>
+        */
         protected bool ForcedSplitCheck(Word word, Sentence result)
         {
             var forcedReplacement = GetCorrectForm(word.GetName(), _splitWords);
@@ -302,7 +387,18 @@ namespace SpellChecker
 
             return false;
         }
-
+        
+        /**
+        * <summary>
+        * Checks if the given word is a shortcut form, such as "5kg" or "2.5km".
+        * If it is, it splits the word into its number and unit form and adds them to the given sentence.
+        * </summary>
+        * 
+        * <param name="word">The word to check for shortcut split.</param>
+        * <param name="result">The sentence that the word belongs to.</param>
+        * 
+        * <returns>True if the word was split, false otherwise.</returns>
+        */
         protected bool ForcedShortcutSplitCheck(Word word, Sentence result)
         {
             var shortcutRegex = "^(([1-9][0-9]*)|[0])(([.]|[,])[0-9]*)?(" + Shortcuts[0];
@@ -332,7 +428,19 @@ namespace SpellChecker
 
             return false;
         }
-
+        
+        
+        /**
+        * <summary>
+        * Checks if the given word has a "da" or "de" suffix that needs to be split according to a predefined set of rules.
+        * If the split is needed, the word is replaced with its bare form and "da" or "de" in the given sentence.
+        * </summary>
+        * 
+        * <param name="word">the word to check for "da" or "de" split</param>
+        * <param name="result">the sentence that the word belongs to</param>
+        * 
+        * <returns>true if the word was split, false otherwise</returns>
+        */
         protected bool ForcedDeDaSplitCheck(Word word, Sentence result)
         {
             var wordName = word.GetName();
@@ -401,8 +509,21 @@ namespace SpellChecker
 
             return false;
         }
-
-        protected bool ForcedSuffixMergeCheck(Word word, Sentence result, Word previousWord)
+        
+        
+        /**
+        * <summary>
+        * Checks if the given word is a suffix like 'li' or 'lik' that needs to be merged with its preceding word which is a number.
+        * If the merge is needed, the word and its preceding word are replaced with their merged form in the given sentence.
+        * </summary>
+        *
+        * <param name="word">the word to check for merge</param>
+        * <param name="sentence">the sentence that the word belongs to</param>
+        * <param name="previousWord">the preceding word of the given word</param>
+        *
+        * <returns>true if the word was merged, false otherwise</returns> 
+        */
+        protected bool ForcedSuffixMergeCheck(Word word, Sentence sentence, Word previousWord)
         {
             var liList = new List<string>()
             {
@@ -421,7 +542,7 @@ namespace SpellChecker
                         if (word.GetName().Length == 2 &&
                             Fsm.MorphologicalAnalysis(previousWord.GetName() + "'" + suffix).Size() > 0)
                         {
-                            result.ReplaceWord(result.WordCount() - 1, new Word(previousWord.GetName() + "'" + suffix));
+                            sentence.ReplaceWord(sentence.WordCount() - 1, new Word(previousWord.GetName() + "'" + suffix));
                             return true;
                         }
                     }
@@ -431,7 +552,7 @@ namespace SpellChecker
                         if (word.GetName().Length == 3 &&
                             Fsm.MorphologicalAnalysis(previousWord.GetName() + "'" + suffix).Size() > 0)
                         {
-                            result.ReplaceWord(result.WordCount() - 1, new Word(previousWord.GetName() + "'" + suffix));
+                            sentence.ReplaceWord(sentence.WordCount() - 1, new Word(previousWord.GetName() + "'" + suffix));
                             return true;
                         }
                     }
@@ -440,7 +561,23 @@ namespace SpellChecker
 
             return false;
         }
-
+        
+        /**
+        * <summary>
+        * Checks whether the next word and the previous word can be merged if the current word is a hyphen,
+        * an en-dash or an em-dash.
+        * If the previous word and the next word exist and they are valid words,
+        * it merges the previous word and the next word into a single word and add the new word to the sentence
+        * If the merge is valid, it returns true.
+        * </summary>
+        * 
+        * <param name="word">current word</param>
+        * <param name="result">the sentence that the word belongs to</param>
+        * <param name="previousWord">the word before current word</param>
+        * <param name="nextWord">the word after current word</param>
+        * 
+        * <returns>true if merge is valid, false otherwise</returns>
+        */
         protected bool ForcedHyphenMergeCheck(Word word, Sentence result, Word previousWord, Word nextWord)
         {
             if (word.GetName().Equals("-") || word.GetName().Equals("–") || word.GetName().Equals("—"))
@@ -460,7 +597,20 @@ namespace SpellChecker
 
             return false;
         }
-
+        
+        
+        /**
+        * <summary>
+        * Checks whether the current word ends with a valid question suffix and split it if it does.
+        * It splits the word with the question suffix and adds the two new words to the sentence.
+        * If the split is valid, it returns true.
+        * </summary>
+        * 
+        * <param name="word">current word</param>
+        * <param name="result">the sentence that the word belongs to</param>
+        * 
+        * <returns>true if split is valid, false otherwise</returns>
+        */
         protected bool ForcedQuestionSuffixSplitCheck(Word word, Sentence result)
         {
             var wordName = word.GetName();
@@ -486,7 +636,18 @@ namespace SpellChecker
 
             return false;
         }
-
+        
+        /**
+        * <summary>
+        * Generates a list of merged candidates for the word and previous and next words.
+        * </summary>
+        * 
+        * <param name="previousWord">The previous word in the sentence.</param>
+        * <param name="word">The word currently being checked.</param>
+        * <param name="nextWord">The next word in the sentence.</param>
+        * 
+        * <returns>A list of merged candidates.</returns>
+        */
         protected List<Candidate> MergedCandidatesList(Word previousWord, Word word, Word nextWord)
         {
             var mergedCandidates = new List<Candidate>();
@@ -519,7 +680,17 @@ namespace SpellChecker
 
             return mergedCandidates;
         }
-
+        
+        
+        /**
+        * <summary>
+        * Generates a list of split candidates for the given word.
+        * </summary>
+        * 
+        * <param name="word">The word currently being checked.</param>
+        * 
+        * <returns>A list of split candidates.</returns>
+        */
         protected List<Candidate> SplitCandidatesList(Word word)
         {
             var splitCandidates = new List<Candidate>();
@@ -537,39 +708,66 @@ namespace SpellChecker
 
             return splitCandidates;
         }
-
-        private void LoadDictionaries()
+        
+        /**
+        * <summary>
+        * Loads the merged and split lists from the specified files.
+        * </summary>
+        */
+        protected virtual void LoadDictionaries()
         {
             string[] list;
             string result;
-            var assembly = typeof(SpellChecker).Assembly;
-            var stream = assembly.GetManifestResourceStream("SpellChecker.merged.txt");
-            var streamReader = new StreamReader(stream);
-            var line = streamReader.ReadLine();
-            while (line != null)
+            string line;
+            StreamReader mergedReader;
+            StreamReader splitReader;
+            try
             {
-                list = line.Split(" ");
-                _mergedWords[list[0] + " " + list[1]] = list[2];
-                line = streamReader.ReadLine();
-            }
-
-            stream = assembly.GetManifestResourceStream("SpellChecker.split.txt");
-            streamReader = new StreamReader(stream);
-            line = streamReader.ReadLine();
-            while (line != null)
-            {
-                list = line.Split(" ");
-                result = list[1];
-                for (var i = 2; i < list.Length; i++)
+                if (Parameter.GetDomain() == null)
                 {
-                    result += " " + list[i];
+                    mergedReader = new StreamReader(File.OpenRead("merged.txt"), Encoding.UTF8);
+                    splitReader = new StreamReader(File.OpenRead("split.txt"), Encoding.UTF8);
                 }
-
-                _splitWords.Add(list[0], result);
-                line = streamReader.ReadLine();
+                else
+                {
+                    mergedReader = new StreamReader(File.OpenRead(Parameter.GetDomain() + "_merged.txt"), Encoding.UTF8);
+                    splitReader = new StreamReader(File.OpenRead(Parameter.GetDomain() + "_split.txt"), Encoding.UTF8);
+                }
+                line = mergedReader.ReadLine();
+                while (line != null)
+                {
+                    list = line.Split(" ");
+                    _mergedWords[list[0] + " " + list[1]] = list[2];
+                    line = mergedReader.ReadLine();
+                }
+                mergedReader.Close();
+                
+                line = splitReader.ReadLine();
+                while (line != null)
+                {
+                    list = line.Split(" ");
+                    result = list[1];
+                    for (var i = 2; i < list.Length; i++)
+                    {
+                        result += " " + list[i];
+                    }
+                    _splitWords.Add(list[0], result);
+                    line = splitReader.ReadLine();
+                }
+                splitReader.Close();
+            }
+            catch (IOException e)
+            {
+                Console.WriteLine(e.StackTrace);
             }
         }
-
+        
+        /// <summary>
+        /// Returns the correct form of a given word by looking it up in the provided dictionary.
+        /// </summary>
+        /// <param name="wordName">The name of the word to look up in the dictionary.</param>
+        /// <param name="dictionary">The dictionary to use for looking up the word.</param>
+        /// <returns>The correct form of the word, as stored in the dictionary, or null if the word is not found.</returns>
         protected string GetCorrectForm(string wordName, Dictionary<string, string> dictionary)
         {
             if (dictionary.ContainsKey(wordName))
@@ -579,7 +777,12 @@ namespace SpellChecker
 
             return null;
         }
-
+        
+        /// <summary>
+        /// Splits a word into two parts, a key and a value, based on the first non-numeric/non-punctuation character.
+        /// </summary>
+        /// <param name="word">The Word object to split.</param>
+        /// <returns>An SimpleEntry object containing the key (numeric/punctuation characters) and the value (remaining characters).</returns>
         private Tuple<string, string> GetSplitPair(Word word)
         {
             var key = "";
