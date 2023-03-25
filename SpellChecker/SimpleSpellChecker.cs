@@ -44,7 +44,7 @@ namespace SpellChecker
             "miymişler", "mıymışsın", "mıymışlar", "muymuşsun", "muymuşlar", "müymüşsün", "müymüşler", "misinizdir",
             "mısınızdır", "musunuzdur", "müsünüzdür"
         };
-        
+
         /**
          * <summary>
          * A constructor of <see cref="SimpleSpellChecker"/> class which takes an <see cref="FsmMorphologicalAnalyzer"/> as an input and
@@ -60,7 +60,7 @@ namespace SpellChecker
             Parameter = new SpellCheckerParameter();
             LoadDictionaries();
         }
-        
+
         /**
          * <summary>
          * Another constructor of <see cref="SimpleSpellChecker"/> class which takes a <see cref="FsmMorphologicalAnalyzer"/> and a
@@ -77,7 +77,7 @@ namespace SpellChecker
             Parameter = parameter;
             LoadDictionaries();
         }
-        
+
         /**
          * <summary>
          * The generateCandidateList method takes a string as an input. Firstly, it creates a string consists of lowercase Turkish letters
@@ -119,7 +119,7 @@ namespace SpellChecker
                     {
                         var added = word.Substring(0, i) + t + word.Substring(i);
                         candidates.Add(new Candidate(added, Operator.SPELL_CHECK));
-                        if (i == word.Length - 1) 
+                        if (i == word.Length - 1)
                         {
                             var addedLast = new Candidate(word.Substring(0, i + 1) + t, Operator.SPELL_CHECK);
                             candidates.Add(addedLast);
@@ -127,6 +127,7 @@ namespace SpellChecker
                     }
                 }
             }
+
             return candidates;
         }
 
@@ -161,9 +162,10 @@ namespace SpellChecker
                     }
                 }
             }
+
             return candidates;
         }
-        
+
         /**
          * <summary>
          * The spellCheck method takes a {@link Sentence} as an input and loops i times where i ranges from 0 to size of words in given sentence.
@@ -224,7 +226,7 @@ namespace SpellChecker
                     var candidates = MergedCandidatesList(previousWord, word, nextWord);
                     if (candidates.Count < 1)
                     {
-                        candidates = CandidateList(word,sentence);
+                        candidates = CandidateList(word, sentence);
                     }
 
                     if (candidates.Count < 1)
@@ -265,10 +267,11 @@ namespace SpellChecker
 
                 result.AddWord(newWord);
             }
+
             return result;
         }
 
-        
+
         /**
         * <summary>
         * Checks if the given word is a misspelled word according to the misspellings list,
@@ -291,7 +294,7 @@ namespace SpellChecker
 
             return false;
         }
-        
+
         /**
         * <summary>
         * Checks if the given word and its preceding word need to be merged according to the merged list.
@@ -320,7 +323,7 @@ namespace SpellChecker
 
             return false;
         }
-        
+
         /**
         * <summary>
         * Checks if the given word and its next word need to be merged according to the merged list.
@@ -347,7 +350,7 @@ namespace SpellChecker
 
             return false;
         }
-        
+
         /**
         * <summary>
         * Given a multiword form, splits it and adds it to the given sentence.
@@ -361,10 +364,10 @@ namespace SpellChecker
             var words = multiWord.Split(" ");
             foreach (var word in words)
             {
-                result.AddWord(new Word(word));    
+                result.AddWord(new Word(word));
             }
         }
-        
+
         /**
         * <summary>
         * Checks if the given word needs to be split according to the split list.
@@ -387,7 +390,7 @@ namespace SpellChecker
 
             return false;
         }
-        
+
         /**
         * <summary>
         * Checks if the given word is a shortcut form, such as "5kg" or "2.5km".
@@ -428,8 +431,8 @@ namespace SpellChecker
 
             return false;
         }
-        
-        
+
+
         /**
         * <summary>
         * Checks if the given word has a "da" or "de" suffix that needs to be split according to a predefined set of rules.
@@ -509,8 +512,8 @@ namespace SpellChecker
 
             return false;
         }
-        
-        
+
+
         /**
         * <summary>
         * Checks if the given word is a suffix like 'li' or 'lik' that needs to be merged with its preceding word which is a number.
@@ -542,7 +545,8 @@ namespace SpellChecker
                         if (word.GetName().Length == 2 &&
                             Fsm.MorphologicalAnalysis(previousWord.GetName() + "'" + suffix).Size() > 0)
                         {
-                            sentence.ReplaceWord(sentence.WordCount() - 1, new Word(previousWord.GetName() + "'" + suffix));
+                            sentence.ReplaceWord(sentence.WordCount() - 1,
+                                new Word(previousWord.GetName() + "'" + suffix));
                             return true;
                         }
                     }
@@ -552,7 +556,8 @@ namespace SpellChecker
                         if (word.GetName().Length == 3 &&
                             Fsm.MorphologicalAnalysis(previousWord.GetName() + "'" + suffix).Size() > 0)
                         {
-                            sentence.ReplaceWord(sentence.WordCount() - 1, new Word(previousWord.GetName() + "'" + suffix));
+                            sentence.ReplaceWord(sentence.WordCount() - 1,
+                                new Word(previousWord.GetName() + "'" + suffix));
                             return true;
                         }
                     }
@@ -561,7 +566,7 @@ namespace SpellChecker
 
             return false;
         }
-        
+
         /**
         * <summary>
         * Checks whether the next word and the previous word can be merged if the current word is a hyphen,
@@ -597,8 +602,8 @@ namespace SpellChecker
 
             return false;
         }
-        
-        
+
+
         /**
         * <summary>
         * Checks whether the current word ends with a valid question suffix and split it if it does.
@@ -636,7 +641,7 @@ namespace SpellChecker
 
             return false;
         }
-        
+
         /**
         * <summary>
         * Generates a list of merged candidates for the word and previous and next words.
@@ -680,8 +685,8 @@ namespace SpellChecker
 
             return mergedCandidates;
         }
-        
-        
+
+
         /**
         * <summary>
         * Generates a list of split candidates for the given word.
@@ -708,7 +713,20 @@ namespace SpellChecker
 
             return splitCandidates;
         }
-        
+
+
+        protected StreamReader GetReader(string fileName)
+        {
+            if (Parameter.GetDomain() == null)
+            {
+                return new StreamReader(File.OpenRead(fileName), Encoding.UTF8);
+            }
+            else
+            {
+                return new StreamReader(File.OpenRead(Parameter.GetDomain() + "_" + fileName), Encoding.UTF8);
+            }
+        }
+
         /**
         * <summary>
         * Loads the merged and split lists from the specified files.
@@ -723,16 +741,7 @@ namespace SpellChecker
             StreamReader splitReader;
             try
             {
-                if (Parameter.GetDomain() == null)
-                {
-                    mergedReader = new StreamReader(File.OpenRead("merged.txt"), Encoding.UTF8);
-                    splitReader = new StreamReader(File.OpenRead("split.txt"), Encoding.UTF8);
-                }
-                else
-                {
-                    mergedReader = new StreamReader(File.OpenRead(Parameter.GetDomain() + "_merged.txt"), Encoding.UTF8);
-                    splitReader = new StreamReader(File.OpenRead(Parameter.GetDomain() + "_split.txt"), Encoding.UTF8);
-                }
+                mergedReader = GetReader("merged.txt");
                 line = mergedReader.ReadLine();
                 while (line != null)
                 {
@@ -740,8 +749,10 @@ namespace SpellChecker
                     _mergedWords[list[0] + " " + list[1]] = list[2];
                     line = mergedReader.ReadLine();
                 }
+
                 mergedReader.Close();
-                
+
+                splitReader = GetReader("split.txt");
                 line = splitReader.ReadLine();
                 while (line != null)
                 {
@@ -751,9 +762,11 @@ namespace SpellChecker
                     {
                         result += " " + list[i];
                     }
+
                     _splitWords.Add(list[0], result);
                     line = splitReader.ReadLine();
                 }
+
                 splitReader.Close();
             }
             catch (IOException e)
@@ -761,7 +774,7 @@ namespace SpellChecker
                 Console.WriteLine(e.StackTrace);
             }
         }
-        
+
         /// <summary>
         /// Returns the correct form of a given word by looking it up in the provided dictionary.
         /// </summary>
@@ -777,7 +790,7 @@ namespace SpellChecker
 
             return null;
         }
-        
+
         /// <summary>
         /// Splits a word into two parts, a key and a value, based on the first non-numeric/non-punctuation character.
         /// </summary>

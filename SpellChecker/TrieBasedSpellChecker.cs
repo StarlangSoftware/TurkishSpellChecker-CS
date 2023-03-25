@@ -52,14 +52,7 @@ namespace SpellChecker
             StreamReader trieReader;
             try
             {
-                if (Parameter.GetDomain() == null)
-                {
-                    trieReader = new StreamReader(File.OpenRead("generated_words.txt"), Encoding.UTF8);
-                }
-                else
-                {
-                    trieReader = new StreamReader(File.OpenRead(Parameter.GetDomain() + "_generated_words.txt"), Encoding.UTF8);
-                }
+                trieReader = GetReader("generated_words.txt");
                 line = trieReader.ReadLine();
                 while (line != null)
                 {

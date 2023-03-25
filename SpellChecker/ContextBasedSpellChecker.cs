@@ -48,14 +48,7 @@ namespace SpellChecker
             StreamReader contextListReader;
             try
             {
-                if (Parameter.GetDomain() == null)
-                {
-                    contextListReader = new StreamReader(File.OpenRead("context_list.txt"), Encoding.UTF8);
-                }
-                else
-                {
-                    contextListReader = new StreamReader(File.OpenRead(Parameter.GetDomain() + "_context_list.txt"), Encoding.UTF8);
-                }
+                contextListReader = GetReader("context_list.txt");
                 line = contextListReader.ReadLine();
                 while (line != null)
                 {
