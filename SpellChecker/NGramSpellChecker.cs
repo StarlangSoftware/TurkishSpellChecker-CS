@@ -205,9 +205,9 @@ namespace SpellChecker
                     nextRoot = CheckAnalysisAndSetRootForWordAtIndex(sentence, i + 2);
                     continue;
                 }
-                if (Parameter.DeMiCheck())
+                if (Parameter.SuffixCheck())
                 {
-                    if (ForcedDeDaSplitCheck(word, result) || ForcedQuestionSuffixSplitCheck(word, result))
+                    if (ForcedDeDaSplitCheck(word, result) || ForcedSuffixSplitCheck(word, result) || ForcedQuestionSuffixSplitCheck(word, result))
                     {
                         previousRoot = CheckAnalysisAndSetRootForWordAtIndex(result, result.WordCount() - 1);
                         root = nextRoot;
