@@ -139,8 +139,9 @@ namespace SpellChecker
          * {@link FsmParseList} is 0, it then removes the ith item.
          * </summary>
          *
-         * <param name="word">Word input.</param>
-         * <returns>candidates {@link List}.</returns>
+         * <param name="word">Word input</param>
+         * <param name="sentence">Sentence input</param>
+         * <returns>candidates {@link List}</returns>
          */
         protected virtual List<Candidate> CandidateList(Word word, Sentence sentence)
         {
@@ -212,7 +213,7 @@ namespace SpellChecker
                 }
 
                 if (ForcedSplitCheck(word, result) || ForcedShortcutSplitCheck(word, result) ||
-                    ForcedDeDaSplitCheck(word, result) || ForcedQuestionSuffixSplitCheck(word, result))
+                    ForcedDeDaSplitCheck(word, result) || ForcedQuestionSuffixSplitCheck(word, result) || ForcedSuffixSplitCheck(word, result))
                 {
                     continue;
                 }
@@ -461,13 +462,15 @@ namespace SpellChecker
                         (TxtWord)Fsm.GetDictionary().GetWord(newWordName.ToLower(new CultureInfo("tr-TR")));
                     if (txtNewWord != null && txtNewWord.IsProperNoun())
                     {
-                        if (Fsm.MorphologicalAnalysis(newWordName + "'" + "da").Size() > 0)
+                        var newWordNameCapitalized = 
+                            newWordName.Substring(0, 1).ToUpper(new CultureInfo("tr-TR")) + newWordName.Substring(1);
+                        if (Fsm.MorphologicalAnalysis(newWordNameCapitalized + "'" + "da").Size() > 0)
                         {
-                            result.AddWord(new Word(newWordName + "'" + "da"));
+                            result.AddWord(new Word(newWordNameCapitalized + "'" + "da"));
                         }
                         else
                         {
-                            result.AddWord(new Word(newWordName + " " + "de"));
+                            result.AddWord(new Word(newWordNameCapitalized + " " + "de"));
                         }
 
                         return true;
@@ -509,11 +512,40 @@ namespace SpellChecker
                     }
                 }
             }
-
+            return false;
+        } 
+        
+        /**
+        * <summary>
+        * Checks whether the given {@link Word} can be split into a proper noun and a suffix, with an apostrophe in between
+        * and adds the split result to the {@link Sentence} if it's valid.
+        * </summary>
+        *
+        * <param name="word">the word to check for forced suffix split</param>
+        * <param name="result">the sentence that the word belongs to</param>
+        * 
+        * <returns>true if the split is successful, false otherwise</returns>   
+        */
+        protected bool ForcedSuffixSplitCheck(Word word, Sentence result) {
+            var wordName = word.GetName();
+            if (Fsm.MorphologicalAnalysis(wordName).Size() > 0) {
+                return false;
+            }
+            for (var i = 1; i < wordName.Length; i++)
+            {
+                var probableProperNoun = wordName.Substring(0, 1).ToUpper(new CultureInfo("tr")) + wordName.Substring(1);
+                var probableSuffix = wordName.Substring(i);
+                var apostropheWord = probableProperNoun + "'" + probableSuffix;
+                var txtWord = (TxtWord) Fsm.GetDictionary().GetWord(probableProperNoun.ToLower(new CultureInfo("tr-TR")));
+                if (txtWord != null && txtWord.IsProperNoun() && Fsm.MorphologicalAnalysis(apostropheWord).Size() > 0)
+                {
+                    result.AddWord(new Word(apostropheWord));
+                    return true;
+                }
+            }
             return false;
         }
-
-
+        
         /**
         * <summary>
         * Checks if the given word is a suffix like 'li' or 'lik' that needs to be merged with its preceding word which is a number.
@@ -628,11 +660,11 @@ namespace SpellChecker
             {
                 if (wordName.EndsWith(questionSuffix))
                 {
-                    var newWordName = wordName.Substring(0, wordName.LastIndexOf(questionSuffix));
-                    var txtWord = (TxtWord)Fsm.GetDictionary().GetWord(newWordName);
-                    if (Fsm.MorphologicalAnalysis(newWordName).Size() > 0 && txtWord != null && !txtWord.IsCode())
+                    var splitWordName = wordName.Substring(0, wordName.LastIndexOf(questionSuffix));
+                    var splitWordRoot = (TxtWord) Fsm.GetDictionary().GetWord(Fsm.MorphologicalAnalysis(splitWordName).GetParseWithLongestRootWord().GetWord().GetName());
+                    if (Fsm.MorphologicalAnalysis(splitWordName).Size() > 0 && splitWordRoot != null && !splitWordRoot.IsCode())
                     {
-                        result.AddWord(new Word(newWordName));
+                        result.AddWord(new Word(splitWordName));
                         result.AddWord(new Word(questionSuffix));
                         return true;
                     }
