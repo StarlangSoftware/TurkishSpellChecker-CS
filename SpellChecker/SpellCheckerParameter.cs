@@ -3,14 +3,14 @@
     public class SpellCheckerParameter
     {
         private double _threshold = 0.0;
-        private bool _deMiCheck = true;
+        private bool _suffixCheck = true;
         private bool _rootNGram = true;
         private int _minWordLength = 4;
         private string _domain = null;
         
         /// <summary>
         /// Constructs a SpellCheckerParameter object with default values.
-        /// The default threshold is 0.0, the De-Mi check is enabled, the root ngram is enabled,
+        /// The default threshold is 0.0, the suffix check is enabled, the root ngram is enabled,
         /// the minimum word length is 4, and domain name value is null.
         /// </summary>
         public SpellCheckerParameter()
@@ -27,14 +27,15 @@
         }
         
         /// <summary>
-        /// Enables or disables De-Mi check for the spell checker.
+        /// Enables or disables suffix check for the spell checker.
         /// </summary>
         /// <seealso cref="SimpleSpellChecker.ForcedDeDaSplitCheck(Word, Sentence)"/>
         /// <seealso cref="SimpleSpellChecker.ForcedQuestionSuffixSplitCheck(Word, Sentence)"/>
-        /// <param name="deMiCheck">a boolean indicating whether the De-Mi check should be enabled (true) or disabled (false)</param>
-        public void SetDeMiCheck(bool deMiCheck)
+        /// <seealso cref="SimpleSpellChecker.ForcedSuffixSplitCheck(Word, Sentence)"/>
+        /// <param name="suffixCheck">a boolean indicating whether the suffix check should be enabled (true) or disabled (false)</param>
+        public void SetSuffixCheck(bool suffixCheck)
         {
-            _deMiCheck = deMiCheck;
+            _suffixCheck = suffixCheck;
         }
         
         /// <summary>
@@ -74,14 +75,15 @@
         }
         
         /// <summary>
-        /// Returns whether De-Mi check is enabled for the spell checker.
+        /// Returns whether suffix check is enabled for the spell checker.
         /// </summary>
         /// <seealso cref="SimpleSpellChecker.ForcedDeDaSplitCheck(Word, Sentence)"/>
         /// <seealso cref="SimpleSpellChecker.ForcedQuestionSuffixSplitCheck(Word, Sentence)"/>
-        /// <returns>a boolean indicating whether De-Mi check is enabled for the spell checker</returns>
-        public bool DeMiCheck()
+        /// <seealso cref="SimpleSpellChecker.ForcedSuffixSplitCheck(Word, Sentence)"/>
+        /// <returns>a boolean indicating whether suffix check is enabled for the spell checker</returns>
+        public bool SuffixCheck()
         {
-            return _deMiCheck;
+            return _suffixCheck;
         }
         
         /// <summary>
