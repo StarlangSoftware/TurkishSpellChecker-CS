@@ -470,7 +470,7 @@ namespace SpellChecker
                         }
                         else
                         {
-                            result.AddWord(new Word(newWordNameCapitalized + " " + "de"));
+                            result.AddWord(new Word(newWordNameCapitalized + "'" + "de"));
                         }
 
                         return true;
@@ -661,6 +661,9 @@ namespace SpellChecker
                 if (wordName.EndsWith(questionSuffix))
                 {
                     var splitWordName = wordName.Substring(0, wordName.LastIndexOf(questionSuffix));
+                    if (Fsm.MorphologicalAnalysis(splitWordName).Size() < 1) {
+                        return false;
+                    }
                     var splitWordRoot = (TxtWord) Fsm.GetDictionary().GetWord(Fsm.MorphologicalAnalysis(splitWordName).GetParseWithLongestRootWord().GetWord().GetName());
                     if (Fsm.MorphologicalAnalysis(splitWordName).Size() > 0 && splitWordRoot != null && !splitWordRoot.IsCode())
                     {
