@@ -51,7 +51,7 @@ namespace Test
             for (var i = 0; i < modified.Length; i++)
             {
                 Assert.AreEqual(original[i].ToString(), nGramSpellChecker.SpellCheck(modified[i]).ToString());
-            }   
+            }
         }
 
         [Test]
@@ -94,6 +94,48 @@ namespace Test
                 new Sentence("bu son model ciha 24inç ekran büyüklüğünde ve 9kg ağırlıktadır")
             };
             var fsm = new FsmMorphologicalAnalyzer();
+            var nGram = new NGram<string>("../../../ngram.txt");
+            nGram.CalculateNGramProbabilities(new NoSmoothing<string>());
+            var nGramSpellChecker = new NGramSpellChecker(fsm, nGram, new SpellCheckerParameter());
+            for (var i = 0; i < modified.Length; i++)
+            {
+                Assert.AreEqual(original[i].ToString(), nGramSpellChecker.SpellCheck(modified[i]).ToString());
+            }
+        }
+
+        [Test]
+        public void TestForcedChecks() {
+            Sentence[] original = 
+            {
+                new Sentence("yardımcı olur musunuz ?"),
+                new Sentence("buraya daha önce gelmemiş miydik ?"),
+                new Sentence("kutunun boyutları 0.2 m x 0.3 m x 0.5 m olacak"),
+                new Sentence("2 tb depolama alanına sahip 7200 rpm bir disk"),
+                new Sentence("anahtarlarımı Kadıköy'de bir lokantada unutmuşum"),
+                new Sentence("bütün suç Selma'da değil"),
+                new Sentence("Fransa'nın başkenti Paris'tir"),
+                new Sentence("Nişantaşı'ndan Kadıköy'e gitmek için metroya binip Üsküdar'da inmek gerekiyor"),
+                new Sentence("90'lı yıllarda ülkede çok büyük değişimler oldu"),
+                new Sentence("100'lük parçaları bir araya getirerek 100'lük bir resim oluşturduk"),
+                new Sentence("size konuyla ilgili bir e-posta gönderdim"),
+                new Sentence("meyve-sebze reyonundan bir kilo elma aldım"),
+            };
+            Sentence[] modified = 
+            {
+                new Sentence("yardımcı olurmusunuz ?"),
+                new Sentence("buraya daha önce gelmemişmiydik ?"),
+                new Sentence("kutunun boyutları 0.2m x 0.3m x 0.5m olacak"),
+                new Sentence("2tb depolama alanına sahip 7200rpm bir disk"),
+                new Sentence("anahtarlarımı Kadıköyda bir lokantada unutmuşum"),
+                new Sentence("bütün suç Selmada değil"),
+                new Sentence("Fransanın başkenti Paristir"),
+                new Sentence("Nişantaşından Kadıköye gitmek için metroya binip Üsküdarda inmek gerekiyor"),
+                new Sentence("90 lü yıllarda ülkede çok büyük değişimler oldu"),
+                new Sentence("100 lık parçaları bir araya getirerek 100 lık bir resim oluşturduk"),
+                new Sentence("size konuyla ilgili bir e - posta gönderdim"),
+                new Sentence("meyve — sebze reyonundan bir kilo elma aldım"),
+            };
+            var fsm = new FsmMorphologicalAnalyzer(); 
             var nGram = new NGram<string>("../../../ngram.txt");
             nGram.CalculateNGramProbabilities(new NoSmoothing<string>());
             var nGramSpellChecker = new NGramSpellChecker(fsm, nGram, new SpellCheckerParameter());
