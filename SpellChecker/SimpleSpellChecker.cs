@@ -750,6 +750,11 @@ namespace SpellChecker
         }
 
 
+        /// <summary>
+        /// Opens and returns a file reader of a given file name.
+        /// </summary>
+        /// <param name="fileName">File to read</param>
+        /// <returns>File reader of the given file.</returns>
         protected StreamReader GetReader(string fileName)
         {
             if (Parameter.GetDomain() == null)

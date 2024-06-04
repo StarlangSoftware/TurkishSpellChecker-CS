@@ -119,6 +119,12 @@ namespace SpellChecker
             return null;
         }
 
+        /// <summary>
+        /// Returns the bi-gram probability P(word2 | word1) for the given bigram consisting of two words.
+        /// </summary>
+        /// <param name="word1">First word in bi-gram</param>
+        /// <param name="word2">Second word in bi-gram</param>
+        /// <returns>Bi-gram probability P(word2 | word1)</returns>
         private double GetProbability(string word1, string word2)
         {
             return _nGram.GetProbability(word1, word2);
