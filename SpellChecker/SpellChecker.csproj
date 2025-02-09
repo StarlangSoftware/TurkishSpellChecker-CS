@@ -3,13 +3,13 @@
     <PropertyGroup>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <PackageId>NlpToolkit-SpellChecker</PackageId>
-        <PackageVersion>1.0.8</PackageVersion>
-        <TargetFrameworks>netcoreapp3.1;net8.0</TargetFrameworks>
+        <PackageVersion>1.0.9</PackageVersion>
+        <TargetFramework>net8.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="NlpToolkit-MorphologicalAnalysis" Version="1.0.22" />
-      <PackageReference Include="NlpToolkit-NGram" Version="1.0.7" />
+      <PackageReference Include="NlpToolkit-MorphologicalAnalysis" Version="1.0.23" />
+      <PackageReference Include="NlpToolkit-NGram" Version="1.0.8" />
     </ItemGroup>
 
     <ItemGroup>
